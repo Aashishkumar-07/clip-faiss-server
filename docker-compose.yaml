@@ -1,0 +1,12 @@
+services:
+  clip-faiss-server:
+    build: .
+    container_name: clip-faiss-server
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+    volumes:
+      - ./data/image:/data/image
+      - ./data/faiss_index:/data/faiss_index
+    restart: unless-stopped

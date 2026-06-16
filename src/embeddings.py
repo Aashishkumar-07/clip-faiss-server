@@ -7,6 +7,7 @@ import os
 
 # Custom CLIPEmbeddings class implementing the methods in abstract class Embeddings
 # smaller model - openai/clip-vit-base-patch32
+# Using transformers==4.48.3
 class CLIPEmbeddings(Embeddings):
     def __init__(self, device="cpu"):
         print(f"clip embedding model : {MODEL_NAME} loaded on {device}")  
@@ -18,10 +19,11 @@ class CLIPEmbeddings(Embeddings):
     def get_image_embedding(self, image):
       inputs = self.processor(images=image, return_tensors="pt").to(self.device)
       with torch.no_grad():
-        image_features = self.model.get_image_features(**inputs)
+        # image_features = self.model.get_image_features(**inputs)
+        embedding = self.model.get_image_features(**inputs)
 
       # print(f"DIM {image_features.pooler_output.shape}")
-      embedding = image_features.pooler_output
+      # embedding = image_features.pooler_output
       # print(f"embedding shape {embedding.shape}")
       return embedding.cpu().tolist()
 
@@ -29,10 +31,12 @@ class CLIPEmbeddings(Embeddings):
     def get_text_embedding(self, text: str):
         inputs = self.tokenizer([text], padding=True, return_tensors="pt").to(self.device)
         with torch.no_grad():
-          text_features = self.model.get_text_features(**inputs)
+          # text_features = self.model.get_text_features(**inputs)
+          embedding = self.model.get_text_features(**inputs)
 
         # print(f"DIM {text_features.pooler_output.shape}")
-        embedding = text_features.pooler_output
+        # print(f"DIM {text_features.shape, text_features}")
+        # embedding = text_features.pooler_output
         # print(f"embedding shape {embedding.shape}")
         return embedding.cpu().tolist()
 

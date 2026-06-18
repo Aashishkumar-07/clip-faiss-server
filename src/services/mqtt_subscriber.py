@@ -1,12 +1,9 @@
 from services.image_ingestion import create_embedding  
 from pyaml_env import parse_config
 import paho.mqtt.client as mqtt
-from dotenv import load_dotenv
 from pathlib import Path
 import json
 
-# Load environment variables from .env file
-load_dotenv()  
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 class MQTTSubscriber:

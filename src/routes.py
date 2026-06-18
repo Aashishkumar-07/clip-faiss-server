@@ -1,18 +1,27 @@
 from services.faiss_vectorstore import add_to_index, save_index, search_similar
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException
-from schemas import SearchRequest, ResponseModelSearch
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, Request
+from schemas import SearchRequest, ResponseModelSearch, CaptionResponse
 import services.faiss_vectorstore as faiss_vectorstore
-from globals import IMAGE_DIR
+import services.fastvlm_caption as fastVLM
+from globals import IMAGE_DIR, CAPTION_IMAGE_SIMILARITY_THRESHOLD
 from pathlib import Path
 from PIL import Image
+import numpy as np
+import embeddings 
 import uuid
 import io
 import os
 
-
 # Routes
 router = APIRouter()
-    
+last_embedding = None
+
+# Helper function
+def cosine_similarity(a: np.ndarray, b: np.ndarray) -> float:
+    a_norm = a / np.linalg.norm(a)
+    b_norm = b / np.linalg.norm(b)
+    return float(np.dot(a_norm, b_norm))
+
 # Deprecated with RabbitMQTT ingestion
 @router.post("/create_embedding")
 async def process(
@@ -83,6 +92,35 @@ async def search(req: SearchRequest):
 
   # Unhandled internal error (converts status code to 500)
   except Exception as e:
+    raise HTTPException(status_code=500, detail=str(e))
+
+@router.post("/caption", response_model=CaptionResponse)
+async def get_caption(request: Request):
+  global last_embedding
+  try:
+    clip_embedding = embeddings.CLIPEmbeddings()
+    image_bytes = await request.body()
+    image = Image.open(io.BytesIO(image_bytes)).convert("RGB")
+
+    # squeeze to remove batch dimension
+    embedding =  np.array(clip_embedding.get_image_embedding(image)).squeeze(axis=0)
+
+    if last_embedding is not None:
+      similarity = cosine_similarity(embedding, last_embedding)
+      if similarity >= CAPTION_IMAGE_SIMILARITY_THRESHOLD:
+          return CaptionResponse(caption="", changed=False)
+    
+    caption = fastVLM.generate_caption(image)
+    last_embedding = embedding
+    return CaptionResponse(caption=caption, changed=True)
+  
+  # Intentionally returned API error (preserves status code)
+  except HTTPException as e:
+    raise
+
+  # Unhandled internal error (converts status code to 500)
+  except Exception as e:
+    print(e)
     raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/")

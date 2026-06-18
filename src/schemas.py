@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
 # Pydantic model
+from pydantic import BaseModel, Field
 
 # Request model
 class SearchRequest(BaseModel):
@@ -21,3 +21,6 @@ class SearchResult(BaseModel):
 class ResponseModelSearch(BaseModel):
     Response: list[SearchResult]
 
+class CaptionResponse(BaseModel):
+    caption: str
+    changed: bool
